@@ -42,7 +42,7 @@
 			<!-- Any section element inside of this container is displayed as a slide -->
 			<div class="slides">
 				<section>
-					<p style="font-size:60px;">Rustからwasmを作成してみた話</p>
+					<p style="font-size:60px;">webpackのloaderと戯れる話</p>
 					<p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
 					<img alt="" src="./img/neko.jpg" />
 				</section>
@@ -54,12 +54,12 @@
 							<tbody>
 								<tr>
 									<td style="border-bottom:0px solid;">所属:</td>
-									<td style="border-bottom:0px solid;">SORABITO 株式会社</td>
+									<td style="border-bottom:0px solid;">株式会社 ZUU</td>
 								</tr>
 								<tr>
 									<td style="border-bottom:0px solid;">名前:</td>
 									<td style="border-bottom:0px solid;">吉澤 峻行</td>
-								</tr>
+                </tr>
 							</tbody>
 						</table>
 
@@ -67,238 +67,114 @@
 				</section>
 
 				<section>
-					<h2>caution!</h2>
-					<p>発表内容は発表者の独自調査によるものです</p>
-					<p>間違ってたらすみません</p>
+					<h2>webpackのloader周りの話です</h2>
+					<p>自作したい。バグ or よく分からん現象踏んだという際に参考ください</p>
 				</section>
 
 				<section>
-					<h2>tl;dr;</h2>
-					<p>現状Emscriptenでwasmを作成したいのであれば</p>
-					<p>LLVMやemccの知識が大なり小なり必要</p>
+          <h2>loaderの処理順</h2>
+          <code class="hljs" data-trim contenteditable>
+            use: [
+              'abc-loader',
+              'def-loader'
+            ]
+          </code>
+          <p>
+            def-loader => abc-loader
+          </p>
+        </section>
+        
+				<section>
+          <h2>正確な処理順</h2>
+          <p>
+            abc-loader.pitch
+            => def-loader.pitch
+            => def-loader default
+            => abc-loader default
+          </p>
+        </section>
+        
+				<section>
+          <h2>pitchがString or Bufferを返却すると対象のdefaultの処理まで省略される</h2>
+          <p>
+            abc-loader.pitch  return "abc"
+           (省略) def-loader.pitch 
+           (省略) def-loader.loader
+           (省略) abc-loader.pitch
+          </p>
 				</section>
 
 				<section>
-					<h2>はじめに</h2>
-					<a href="https://github.com/rchaser53/rust_pack_man">
-						勉強ついでに作ったRustのゲーム
-					</a>
-					<p>EmscriptenでWeb Assembly(wasm)に変換してみました</p>
+          <h2>例2</h2>
+          <p>
+            abc-loader.pitch  return
+            def-loader.pitch return "abc"
+           (省略) def-loader.loader
+            abc-loader.pitch return "something"
+          </p>
 				</section>
 
 				<section style="text-align:left;">
-					<p>出てくる単語の概要</p>
-					<div style="display:flex; justify-content: space-between;">
-						<p>SDL2</p><p>ゲームエンジンとして使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>Rust</p><p>wasmの変換元のアプリを作るのに使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>Cargo</p><p>Rustからwasmを作成するのに使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>Emscripten</p><p>wasmに変換するのに使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>LLVM</p><p>コンパイラ基盤。中間コード作成に使用</p>
-					</div>
+          <section style="text-align:left;">
+            <p>どんなことに使われている?</p>
+            <p>cache-loader</p>
+            <div style="display:flex; justify-content: space-between;">
+              <p>pitchフェイズでcacheファイルのmtimeと依存ファイルのmtimeを比較、差異がない場合はcacheファイルを読みこみreturn</p>
+              <p>defaultフェイズで依存ファイルのpathとそのmtime、前のloaderで生成した文字列を保存</p>
+            </div>
+          </section>
+
+          <section style="text-align:left;">
+            <p>mtime … 最終変更時刻 (modify time)</p>
+            <p>最後にファイルを変更した時刻のこと。正確にはファイルに write(2) または truncate(2) した場合に変更</p>
+          </section>
 				</section>
 
 				<section style="text-align:left;">
-					<p>SDL2</p>
-					<p>Simple DirectMedia Layer 2</p>
-					<li>クロスプラットフォームの開発ライブラリ</li>
-					<li>OpenGlや様々なハードウェアへアクセスに使用</li>
-					<p>例. オーディオ, キーボード, マウス etc...</p>
+					<p>気になるところ</p>
+					<p>fsを使っている</p>
+					<p>オンメモリなら早くなるのでは?</p>
 				</section>
 
 				<section style="text-align:left;">
-					<p>Rust</p>
-					<p>今回重要なこと</p>
-					<li>LLVM上に構築されている言語</li>
-					<li>公式がwasmやasm.jsにビルドする機能を提供</li>
+					<p>公式でもfs以外の使用を言及されている</p>
+					<p>Redisとかmemcachedとか</p>
 				</section>
 
 				<section style="text-align:left;">
-					<p>Cargo</p>
-					<p>Rustのビルドシステム兼パッケージマネージャ</p>
-					<p>以下のような形でビルド対象を変更することができる</p>
-					<p>(Rust付属のrustcでもできる)</p>
-					<code class="hljs" data-trim contenteditable># asm.js</code>
-					<code class="hljs" data-trim contenteditable>
-						$ cargo build --target asmjs-unknown-emscripten
-					</code>
-					<code class="hljs" data-trim contenteditable></code>
-					<code class="hljs" data-trim contenteditable># wasm</code>
-					<code class="hljs" data-trim contenteditable>
-						$ cargo build --target wasm32-unknown-emscripten
-					</code>
+          <p>実際にやってみた</p>
+          <p>dockerのredis:alpineでredisコンテナを作成して比較</p>
+				</section>
+        	
+				<section style="text-align:left;">
+          <h2>3回実行した平均値(cacheありは2回目以降)</h2>
+          <p><p>cache-loader なし</p><p>66.01s</p></p>
+          <p><p>cache-loader(デフォルト)</p>44.34s<p></p></p>
+          <p><p>cache-loader(redis使用)</p>42.67s<p></p></p>
 				</section>
 
 				<section style="text-align:left;">
-					<p>Rust単体でwasmのビルドは不可</p>
-					<p>bit codeからwasmに変換するEmscriptenが必要</p>
+					<p>あまり変わらない…</p>
+					<p>IOがそこまで問題なっていない可能性</p>
 				</section>
 
 				<section style="text-align:left;">
-					<p>Emscripten</p>
-					<p>bit codeからasm.jsやwasmに変換できるコンパイラー</p>
-					<div style="width:100%; text-align:center;">
-						<img alt="" src="img/EmscriptenToolchain.png" />
-					</div>
-				</section>
+          <section style="text-align:left;">
+            <p>実行環境を考える必要がある?</p>
+            <p>話題は変わるが,CircleCI上でdocker imageをcacheに保存したことがある</p>
+            <p>downloadした方が早かった(時間を表示する必要あり)</p>
+          </section>
 
-				<section style="text-align:left;">
-					<p>Emscripten Compiler Frontend (emcc)</p>
-					<li>標準的なコンパイラーの代替を目指したもの</li>
-					<li>CとかC++からwasmを作る際にはこれ単体でOK</li>
-
-					<code class="hljs" data-trim contenteditable>
-						$ emcc [options] file...
-					</code>	
-				</section>
-
-				<section style="text-align:left;">
-					<p>Emscripten Ports</p>
-					<a href="https://github.com/emscripten-ports">Emscripten用の便利ライブラリ集</a>
-					<li>現在12個しかない…</li>
-					<li>使用する際は以下のようにportを開ける</li>
-					<code class="hljs" data-trim contenteditable>
-						$ export EMMAKEN_CFLAGS="-s USE_SDL=2"
-					</code>
-				</section>
-
-				<section style="text-align:left;">
-					<p>LLVM</p>
-					<li>様々な言語に対応可能なコンパイラ基盤</li>
-					<li>VMやClangなど様々なサブプロジェクトが存在</li>
-					<li>今回はRustの中間コード(*.bc,*.o)への変換に使用</li>
-				</section>
-
-				<section>
-					<section style="text-align:center;">
-						<p>デモ(Rust)</p>
-						<p>手作り感溢れるナニカをお楽しみください</p>
-						<!-- <img src="img/packman.gif" /> -->
-					</section>
-
-					<section style="text-align:center;">
-						<p>デモ(wasm)</p>
-						<!-- <img src="img/wasm.gif" /> -->
-					</section>
-
-					<section style="text-align:center;">
-						<p>デモ(wasm)</p>
-
-						<p>色々おかしい</p>
-						<p>BGM、効果音がない</p>
-						<p>そもそも円じゃない</p>
-
-						<img src="img/wasm.gif" />
-					</section>
-				</section>
-
-				<section style="text-align:left;">
-					<p>問題点</p>
-					<li>BGM、効果音がない</li>
-					<p>=> emccが正しく変換できていないっぽい</p>
-
-					<li>そもそも円じゃない</li>
-					<p>=> 必要な依存ライブラリがEmscripten Portsにない</p>
-				</section>
-
-				<section style="text-align:left;">
-					<section>
-						<p>BGM、効果音がない</p>
-						<li>Emscriptenが上手く動いていない</li>
-						<li>Fileの読み込みまでは成功</p>
-						<li>rwopsがnullになってしまっている模様</li>
-					</section>
-
-					<section>
-						<p>ちなみに…</p>
-						<p>作成したアプリはtxtファイルからmapを作成している</p>
-						<p>任意にmapは変更できる</p>
-						<p>=> ファイルを読み込むこと自体はできている模様</p>
-					</section>
-				</section>
-
-				<section style="text-align:left;">
-					<p>FS</p>
-					<li>Emscriptenが提供する仮想FileSystem</li>
-					<li>Linux/POSIX File Systemとほぼ同様のinterface</li>
-					<li>CやC++なら以下のような形でemccが使える</li>
-					<code class="hljs" data-trim contenteditable>
-						$ emcc file.cpp -o file.html --preload-file ../../asset_dir@/
-					</code>
-
-					<div style="display:block; height:15px;"></div>
-					<p>emcc単体ではRustからwasmに変換できない…</p>
-					<p>rustcやcargoなどで中間コードを作成する必要がある</p>
-				</section>
-
-				<section style="text-align:left;">
-					<p>しかし…</p>
-					<p>cargoから--preload-fileのオプションをemccに渡せない</p>
-					<p>=> js上からファイルを読み込ませる</p>
-					<pre>
-						<code class="hljs" data-trim contenteditable>
-							var Module = {
-	prerun: [function () {
-		FS.createPreloadedFile(
-			'/',
-			'text1.txt',
-			'/text2.txt',
-			true,
-			false
-		)
-	}]
-}
-						</code>
-					</pre>	
-				</section>
-
-				<section>
-					<p>公式の見解は?</p>
-					<a href="https://github.com/kripken/emscripten/issues/3985">
-						Emscripten用のビルドスクリプトは作ってくれている
-					</a>
-					<p>新しいversionがrust-sdl2に取り込まれれば動くだろう</p>
-					<img src="img/ThankYoufdelapena.png" />
-				</section>
-
-				<section style="text-align:left;">
-					<p>そもそも円じゃない</p>
-
-					<p>Emscripten Portsに</p>
-					<p>線や円などを描画するライブラリ「SDL2_gfx」がない</p>
-					<p>=> SDL2_gfxを外してSDL2が描画できる矩形で代用</p>
-				</section>
-
-				<section style="text-align:left;">
-					<p>自力でemscripten用のビルドスクリプトを書くしかない</p>
-
-					<li>cargoはrustcでを実行した後にemccを呼び出している</li>
-					<li>emccが読めるインプット(*.bc, *.oなど)にrustcで変換</li>
-					<li>emccが読めるライブラリをビルドして読み込ませる</li>
-					<img src="img/errorForSDL2_gfx.png" />
-				</section>
-
-				<section style="text-align:left;">
-					<section style="text-align:left;">
-						<p>まとめというか感想</p>
-
-						<li>単純な変換なら特に問題なさそう</li>
-						<li>ただし使えるライブラリがほぼない</li>
-						<li>自力でEmscripten用ライブラリをビルドする必要あり</li>
-						<li>LLVMとemccの知識が必須</li>
-					</section>
-
-					<section style="text-align:left;">
-						<p>まとめというか感想</p>
-						<li>リベンジは後日、適当なブログ投稿サイトに(qiitaとか)公開予定</li>
-					</section>
+          <section style="text-align:left;">
+            <p>ちなみに…CircleCIはSSDはあるらしい(当たり前か…)</p>
+            <code class="hljs" data-trim contenteditable>
+              circleci@af6dc9372ca2:/sys/class$ lsblk -d -o name,rota
+              NAME ROTA
+              xvda    0
+              xvdb    0
+              xvdc    0
+            </code>
+          </section>
 				</section>
 
 				<section style="text-align:left;">
