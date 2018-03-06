@@ -42,7 +42,7 @@
 			<!-- Any section element inside of this container is displayed as a slide -->
 			<div class="slides">
 				<section>
-					<p style="font-size:60px;">webpackのloaderと戯れる話</p>
+					<p style="font-size:60px;">webpackのloaderとcacheについて</p>
 					<p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
 					<img alt="" src="./img/neko.jpg" />
 				</section>
@@ -67,9 +67,16 @@
 				</section>
 
 				<section>
-					<h2>webpackのloader周りの話です</h2>
+					<h2>webpackのloaderとそれに伴うcacheについてです</h2>
 					<p>自作したい。バグ or よく分からん現象踏んだという際に参考ください</p>
 				</section>
+
+				<section>
+          <h2>loaderって?</h2>
+          <p>babel-loader, ts-loader, vue-loaderとかその辺</p>
+          <p>moduleのソースコードを変換するもの</p>
+          <p>stringとして来るソースコードをstring or bufferとしてreturnしてやれば変換が完了する</p>
+        </section>
 
 				<section>
           <h2>loaderの処理順</h2>
@@ -84,34 +91,30 @@
           </p>
         </section>
         
-				<section>
-          <h2>正確な処理順</h2>
-          <p>
-            abc-loader.pitch
-            => def-loader.pitch
-            => def-loader default
-            => abc-loader default
-          </p>
+				<section style="text-align:left;">
+          <p>正確な処理順</p>
+          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">abc-loader.pitch</div>
+          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">=> def-loader.pitch</div>
+          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">=> def-loader default</div>
+          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">=> abc-loader default</div>
         </section>
         
-				<section>
-          <h2>pitchがString or Bufferを返却すると対象のdefaultの処理まで省略される</h2>
-          <p>
-            abc-loader.pitch  return "abc"
-           (省略) def-loader.pitch 
-           (省略) def-loader.loader
-           (省略) abc-loader.pitch
-          </p>
+				<section style="text-align:left;">
+          <p>pitchがString or Bufferを返却時</p>
+          <p>対象のdefaultの処理まで省略される</p>
+
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return "abc"</p></div>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>(省略)</p></div>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>(省略)</p></div>
 				</section>
 
-				<section>
-          <h2>例2</h2>
-          <p>
-            abc-loader.pitch  return
-            def-loader.pitch return "abc"
-           (省略) def-loader.loader
-            abc-loader.pitch return "something"
-          </p>
+				<section style="text-align:left;">
+          <p>例2</p>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return</p></div>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>return "somethingA"</p></div>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
+          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>return "somethingB"</p></div>
 				</section>
 
 				<section style="text-align:left;">
@@ -126,14 +129,15 @@
 
           <section style="text-align:left;">
             <p>mtime … 最終変更時刻 (modify time)</p>
-            <p>最後にファイルを変更した時刻のこと。正確にはファイルに write(2) または truncate(2) した場合に変更</p>
+            <p>最後にファイルを変更した時刻のこと</p>
+            <p>正確にはファイルにwrite(2)、またはtruncate(2)した場合に変更されるもの</p>
           </section>
 				</section>
 
 				<section style="text-align:left;">
-					<p>気になるところ</p>
-					<p>fsを使っている</p>
-					<p>オンメモリなら早くなるのでは?</p>
+					<h4>気になるところ</h4>
+          <p>fsを使っている</p>
+					<p>=> オンメモリなら早くなるのでは?</p>
 				</section>
 
 				<section style="text-align:left;">
@@ -147,16 +151,28 @@
 				</section>
         	
 				<section style="text-align:left;">
-          <h2>3回実行した平均値(cacheありは2回目以降)</h2>
-          <p><p>cache-loader なし</p><p>66.01s</p></p>
-          <p><p>cache-loader(デフォルト)</p>44.34s<p></p></p>
-          <p><p>cache-loader(redis使用)</p>42.67s<p></p></p>
+          <p>3回実行した平均値(cacheありは2回目以降)</p>
+          <div style="display:flex; width:100%;"><p style="width:50%;">cache-loader なし</p><p>66.01s</p></div>
+          <div style="display:flex; width:100%;"><p style="width:50%;">cache-loader(デフォルト)</p>44.34s<p></p></div>
+          <div style="display:flex; width:100%;"><p style="width:50%;">cache-loader(redis使用)</p>42.67s<p></p></div>
 				</section>
 
 				<section style="text-align:left;">
 					<p>あまり変わらない…</p>
 					<p>IOがそこまで問題なっていない可能性</p>
 				</section>
+
+				<section style="text-align:left;">
+          <h2>アプローチを変更してみる</h2>
+          <p>babel-loader</p>
+          <p>cacheがtxtではなくgzip</p>
+        </section>
+
+				<section style="text-align:left;">
+          <h2>若干早い</h2>
+          <p>babel-loader</p>
+          <p>cacheがtxtではなくgzip</p>
+        </section>
 
 				<section style="text-align:left;">
           <section style="text-align:left;">
@@ -176,6 +192,13 @@
             </code>
           </section>
 				</section>
+
+				<section style="text-align:left;">
+          <p>参考リンク</p>
+          <a href="https://webpack.js.org/concepts/loaders/">公式ページ(かなり充実している)</a>
+          <p>各種loaderのソースコード</p>
+          <a href="http://x68000.q-e-d.net/~68user/unix/pickup?%A5%BF%A5%A4%A5%E0%A5%B9%A5%BF%A5%F3%A5%D7">UNIX/Linuxの部屋 用語集:タイムスタンプ</a>
+        </section>
 
 				<section style="text-align:left;">
 					<h2>ご静聴ありがとうございました!</h2>
