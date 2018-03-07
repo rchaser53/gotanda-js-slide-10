@@ -42,7 +42,7 @@
 			<!-- Any section element inside of this container is displayed as a slide -->
 			<div class="slides">
 				<section>
-					<p style="font-size:60px;">webpackのloaderとcacheについて</p>
+					<p style="font-size:60px;">webpackのpitch loaderについて</p>
 					<p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
 					<img alt="" src="./img/neko.jpg" />
 				</section>
@@ -66,144 +66,199 @@
 					</section>
 				</section>
 
-				<section>
-					<h2>webpackのloaderとそれに伴うcacheについてです</h2>
-					<p>自作したい。バグ or よく分からん現象踏んだという際に参考ください</p>
+				<section style="text-align:left;">
+          <p>webpackのpitch loaderについてです</p>
+          <p>cache-loaderの調査中に気になったの調べました</p>
+					<p>自作、バグ修正の足がかりにでもどうぞ</p>
 				</section>
 
-				<section>
-          <h2>loaderって?</h2>
-          <p>babel-loader, ts-loader, vue-loaderとかその辺</p>
-          <p>moduleのソースコードを変換するもの</p>
-          <p>stringとして来るソースコードをstring or bufferとしてreturnしてやれば変換が完了する</p>
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+          ### loaderとは?
+          - babel-loader, ts-loader, vue-loaderとか
+          - moduleのソースコードを変換するもの
+          - buffer or stringとして来るソースコードをstring or bufferとしてreturnしてやれば変換が完了する
+          - 非同期の場合はthis.async()を使用する
+          </script>
         </section>
 
-				<section>
-          <h2>loaderの処理順</h2>
-          <code class="hljs" data-trim contenteditable>
-            use: [
-              'abc-loader',
-              'def-loader'
-            ]
-          </code>
-          <p>
-            def-loader => abc-loader
-          </p>
-        </section>
-        
-				<section style="text-align:left;">
-          <p>正確な処理順</p>
-          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">abc-loader.pitch</div>
-          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">=> def-loader.pitch</div>
-          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">=> def-loader default</div>
-          <div style="display:flex; height:60px; padding-top:5px; background-color:#777; width:100%;">=> abc-loader default</div>
-        </section>
-        
-				<section style="text-align:left;">
-          <p>pitchがString or Bufferを返却時</p>
-          <p>対象のdefaultの処理まで省略される</p>
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+          ### loaderの処理順
 
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return "abc"</p></div>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>(省略)</p></div>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>(省略)</p></div>
+          ~~~js
+          {
+              test: '/.js$/',
+              use: [ 'abc-loader', 'def-loader' ]
+          }
+          ~~~
+          1. def-loader
+          2. abc-loader
+
+
+          ではない正確にはpitch loaderが先に実行される
+          </script>
+        </section>
+
+				<section style="text-align:left; width:100%; display:block;" data-markdown>
+          <script type="text/template">
+            ## pitch loaderとは
+            - default loaderの前に実行されるoptionalなloader
+            - 値を返すとdefault loaderまで処理が省略される
+            - この時点ではまだソースは読み込まれていない
+          </script>
 				</section>
 
-				<section style="text-align:left;">
-          <p>例2</p>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return</p></div>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>return "somethingA"</p></div>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
-          <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>return "somethingB"</p></div>
-				</section>
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">default loaderの前に実行されるoptionalなloader</p>
 
-				<section style="text-align:left;">
-          <section style="text-align:left;">
-            <p>どんなことに使われている?</p>
-            <p>cache-loader</p>
-            <div style="display:flex; justify-content: space-between;">
-              <p>pitchフェイズでcacheファイルのmtimeと依存ファイルのmtimeを比較、差異がない場合はcacheファイルを読みこみreturn</p>
-              <p>defaultフェイズで依存ファイルのpathとそのmtime、前のloaderで生成した文字列を保存</p>
+          ~~~js
+          // webpack.config.js
+          {
+              test: '/.js$/',
+              use: [ 'abc-loader', 'def-loader' ]
+          }
+          ~~~
+
+          以下が正しい処理順
+          1. abc-loader -- pitch
+          1. def-loader -- pitch
+          1. (read the sources)
+          1. def-loader -- default
+          1. abc-loader -- default
+          </script>
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">default loaderの前に実行されるoptionalなloader</p>
+
+            <img src="./img/eventBubling.png" />
+
+            <div style="text-align: center;">
+            domのevent bublingからデザインされたもの
             </div>
-          </section>
+          </script>
+        </section>
 
-          <section style="text-align:left;">
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            ~~~js
+            module.exports = {
+              pitch: function() {
+                // 値を返すとdefaultまで処理が省略される
+                // 返せる値はStringかBuffer
+                return 'something'
+
+                // 非同期なら 
+                // const callback = this.async();
+                // callback(null, 'something');
+
+                // return      何も返さない(undefind)ならば次のloaderの処理に移る
+              }
+              default: function(sources) {
+                return sources[0]   // Arrayで来るので単純にreturnしているのみ
+              }
+            }
+            ~~~
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            <p>例1</p>
+
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return "abc"</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>(省略)</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>(省略)</p></div>  
+          </script>
+        </section>
+
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            <p>例2</p>
+
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader pitch</p><p>return</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader pitch</p><p>return "somethingA"</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader default</p><p>(省略)</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader default</p><p>return "somethingB"</p></div>
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+            
+            <div style="display:flex; ">
+              <p style="display:block; width:15%;">使用例</p><p>cache-loader</p>
+            </div>
+
+            1. pitch loaderでcacheと依存ファイルのmtimeを比較
+            2. 差異がない場合はcacheを読みこみreturn
+            3. defalult loaderでそれまでのloaderの生成物と依存ファイルのpathとそのmtimeからcacheを作成
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            <p>cacheがtxtファイルで保持されている</p>
+            <p>非効率そう…</p>
+            <p>
+              <a>その件に関してはこちらのslideにどうぞ…</a>
+            </p>
+          </script>
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
             <p>mtime … 最終変更時刻 (modify time)</p>
             <p>最後にファイルを変更した時刻のこと</p>
             <p>正確にはファイルにwrite(2)、またはtruncate(2)した場合に変更されるもの</p>
-          </section>
-				</section>
-
-				<section style="text-align:left;">
-					<h4>気になるところ</h4>
-          <p>fsを使っている</p>
-					<p>=> オンメモリなら早くなるのでは?</p>
-				</section>
-
-				<section style="text-align:left;">
-					<p>公式でもfs以外の使用を言及されている</p>
-					<p>Redisとかmemcachedとか</p>
-				</section>
-
-				<section style="text-align:left;">
-          <p>実際にやってみた</p>
-          <p>dockerのredis:alpineでredisコンテナを作成して比較</p>
-				</section>
-        	
-				<section style="text-align:left;">
-          <p>3回実行した平均値(cacheありは2回目以降)</p>
-          <div style="display:flex; width:100%;"><p style="width:50%;">cache-loader なし</p><p>66.01s</p></div>
-          <div style="display:flex; width:100%;"><p style="width:50%;">cache-loader(デフォルト)</p>44.34s<p></p></div>
-          <div style="display:flex; width:100%;"><p style="width:50%;">cache-loader(redis使用)</p>42.67s<p></p></div>
-				</section>
-
-				<section style="text-align:left;">
-					<p>あまり変わらない…</p>
-					<p>IOがそこまで問題なっていない可能性</p>
-				</section>
-
-				<section style="text-align:left;">
-          <h2>アプローチを変更してみる</h2>
-          <p>babel-loader</p>
-          <p>cacheがtxtではなくgzip</p>
+          </script>
         </section>
 
-				<section style="text-align:left;">
-          <h2>若干早い</h2>
-          <p>babel-loader</p>
-          <p>cacheがtxtではなくgzip</p>
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">この時点ではまだソースは読み込まれていない</p>
+
+            - pathは取得できるので取得はできる(非推奨)
+            - loader-utilsやschema-utilsは使用できるのでoptionなどは取得できる
+            - 第3引数経由で他のloaderに値を渡すことはできる
+          </script>
         </section>
-
-				<section style="text-align:left;">
-          <section style="text-align:left;">
-            <p>実行環境を考える必要がある?</p>
-            <p>話題は変わるが,CircleCI上でdocker imageをcacheに保存したことがある</p>
-            <p>downloadした方が早かった(時間を表示する必要あり)</p>
-          </section>
-
-          <section style="text-align:left;">
-            <p>ちなみに…CircleCIはSSDはあるらしい(当たり前か…)</p>
-            <code class="hljs" data-trim contenteditable>
-              circleci@af6dc9372ca2:/sys/class$ lsblk -d -o name,rota
-              NAME ROTA
-              xvda    0
-              xvdb    0
-              xvdc    0
-            </code>
-          </section>
-				</section>
 
 				<section style="text-align:left;">
           <p>参考リンク</p>
-          <a href="https://webpack.js.org/concepts/loaders/">公式ページ(かなり充実している)</a>
-          <p>各種loaderのソースコード</p>
-          <a href="http://x68000.q-e-d.net/~68user/unix/pickup?%A5%BF%A5%A4%A5%E0%A5%B9%A5%BF%A5%F3%A5%D7">UNIX/Linuxの部屋 用語集:タイムスタンプ</a>
+          <p>
+            <a href="https://webpack.js.org/contribute/writing-a-loader/">公式ページ(かなり充実している)</a>
+          </p>
+          <p>
+            <a href="https://github.com/webpack/webpack/issues/360">Documentation for pitch vs normal loader isn't very clear</a>
+          </p>
+          <p>
+            <a href="http://x68000.q-e-d.net/~68user/unix/pickup?%A5%BF%A5%A4%A5%E0%A5%B9%A5%BF%A5%F3%A5%D7">UNIX/Linuxの部屋 用語集:タイムスタンプ</a>
+          </p>
+          <p>
+            <a href="https://github.com/webpack-contrib/cache-loader/blob/master/src/index.js">cache-loader</a>
+          </p>
         </section>
 
 				<section style="text-align:left;">
 					<h2>ご静聴ありがとうございました!</h2>
 				</section>
-
 			</div>
 		</div>
 
