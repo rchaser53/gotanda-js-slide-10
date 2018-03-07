@@ -240,6 +240,28 @@
           </script>
         </section>
 
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">この時点ではまだソースは読み込まれていない</p>
+
+            - 正直cache-loaderくらいしか第3引数を使っているloaderを見かけない
+            - cacheの依存情報やfileがコンパイル中に変更されていないか確認するために使用している
+            - そもそもpitch loader自体ほとんど使われてない(script-loader, style-loaderとか)
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            ### まとめ
+
+            <p style="font-size: 40px; font-weight:bold;">使う機会はあるのか?</p>
+
+            - webpackに対してはないかもしれない
+            - しかしフェイズを2つに分けて、片方ではcache管理などを行うという設計の仕方は使えそう
+            - まぁその時楽しめれば良いよね
+          </script>
+        </section>
+
 				<section style="text-align:left;">
           <p>参考リンク</p>
           <p>
