@@ -69,22 +69,23 @@
 				<section style="text-align:left;">
           <p>webpackのpitch loaderについてです</p>
           <p>cache-loaderの調査中に気になったの調べました</p>
-					<p>自作、バグ修正の足がかりにでもどうぞ</p>
+					<p>自作、バグ修正の足がかりに役立てば幸いです</p>
 				</section>
 
 				<section style="text-align:left;" data-markdown>
           <script type="text/template">
-          ### loaderとは?
-          - babel-loader, ts-loader, vue-loaderとか
+          <p style="font-size: 50px; font-weight:bold;">loaderとは?</p>
+
+          - いつものアレ(babel-loaderとかcss-loaderとか)
           - moduleのソースコードを変換するもの
-          - buffer or stringとして来るソースコードをstring or bufferとしてreturnしてやれば変換が完了する
-          - 非同期の場合はthis.async()を使用する
+          - 同期/非同期の両方に対応している
+          - loaderは任意のファイルを出力できる(file-loaderとか)
           </script>
         </section>
 
 				<section style="text-align:left;" data-markdown>
           <script type="text/template">
-          ### loaderの処理順
+          <p style="font-size: 50px; font-weight:bold;">loaderの処理順</p>
 
           ~~~js
           {
@@ -102,7 +103,7 @@
 
 				<section style="text-align:left; width:100%; display:block;" data-markdown>
           <script type="text/template">
-            ## pitch loaderとは
+            <p style="font-size: 50px; font-weight:bold;">pitch loaderとは</p>
             - default loaderの前に実行されるoptionalなloader
             - 値を返すとdefault loaderまで処理が省略される
             - この時点ではまだソースは読み込まれていない
@@ -113,20 +114,20 @@
           <script type="text/template">
             <p style="font-size: 40px; font-weight:bold;">default loaderの前に実行されるoptionalなloader</p>
 
-          ~~~js
-          // webpack.config.js
-          {
-              test: '/.js$/',
-              use: [ 'abc-loader', 'def-loader' ]
-          }
-          ~~~
+            ~~~js
+            // webpack.config.js
+            {
+                test: '/.js$/',
+                use: [ 'abc-loader', 'def-loader' ]
+            }
+            ~~~
 
-          以下が正しい処理順
-          1. abc-loader -- pitch
-          1. def-loader -- pitch
-          1. (read the sources)
-          1. def-loader -- default
-          1. abc-loader -- default
+            以下が正しい処理順
+            1. abc-loader -- pitch
+            1. def-loader -- pitch
+            1. (read the sources)
+            1. def-loader -- default
+            1. abc-loader -- default
           </script>
         </section>
 
@@ -136,7 +137,7 @@
 
             <img src="./img/eventBubling.png" />
 
-            <div style="text-align: center;">
+            <div style="text-align: left;">
             domのevent bublingからデザインされたもの
             </div>
           </script>
@@ -204,19 +205,7 @@
 
             1. pitch loaderでcacheと依存ファイルのmtimeを比較
             2. 差異がない場合はcacheを読みこみreturn
-            3. defalult loaderでそれまでのloaderの生成物と依存ファイルのpathとそのmtimeからcacheを作成
-          </script>
-        </section>
-
-				<section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
-
-            <p>cacheがtxtファイルで保持されている</p>
-            <p>非効率そう…</p>
-            <p>
-              <a>その件に関してはこちらのslideにどうぞ…</a>
-            </p>
+            3. defalult loaderでそれまでの生成物と依存ファイルのpath、mtimeからcacheを作成
           </script>
         </section>
 
